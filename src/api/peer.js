@@ -8,7 +8,7 @@ const logger = require('winston'),
   response = require('../lib/response'),
   request = require('../lib/request'),
   error = require('../lib/error'),
-  Peer = require('../models/peer'),
+  // Peer = require('../schema/peer'),
   {
     TYPE_JSON
   } = require('../../config')

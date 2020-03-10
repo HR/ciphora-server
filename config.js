@@ -10,7 +10,7 @@ module.exports = {
   API_VERSION: 'v1',
   ENV,
   IN_DEV: ENV === ENV_DEV,
-  PORT: process.env.PORT || '9000',
+  PORT: process.env.PORT || '7000',
   MONGODB_URI: process.env.MONGODB_URI,
   REDIS_URI: process.env.REDIS_URI,
   TYPE_JSON: 'application/json',

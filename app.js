@@ -11,22 +11,16 @@ const http = require('http'),
   koaBody = require('koa-body'),
   koaCors = require('@koa/cors'),
   helmet = require('koa-helmet'),
-  Graceful = require('@ladjs/graceful'),
-  { hostname } = require('os'),
+  Graceful = require('@ladjs/graceful'),{ hostname } = require('os'),
   logger = require('./src/lib/logger'), // Init logger to override console
   error = require('./src/lib/error'),
+  SignalServer = require('./src/lib/sserver'),
   // redisClient = require('./src/lib/redis'),
-  mongoose = require('./src/lib/db'),
+  // mongoose = require('./src/lib/db'),
   peer = require('./src/api/peer'),
   release = require('./package.json'),
-  {
-    API_VERSION,
-    ENV,
-    IN_DEV,
-    PORT
-  } = require('./config')
-
-
+  WebSocket = require('ws'),
+  {API_VERSION, ENV, IN_DEV, PORT} = require('./config')
 
 /**
  * Init
@@ -40,15 +34,16 @@ const api = new koaRouter({
   prefix: `/${API_VERSION}`
 })
 let server = http.createServer(app.callback())
+const ss = new SignalServer({ server })
 
-
+ss.on('error', (err) => app.emit('error', err))
 
 /**
  * Config
  **/
 
 // Add some security via HTTP headers
-app.use(helmet())
+// app.use(helmet())
 
 if (IN_DEV) {
   // Dev
@@ -72,8 +67,6 @@ app.use(error.handler)
 // Catch errors
 app.on('error', error.handleApp)
 
-
-
 /**
  * Routes
  **/
@@ -81,12 +74,10 @@ app.on('error', error.handleApp)
 // Users
 // api.get('/:id/referral', users.referral)
 
-
 // Home
-router.get('/', async (ctx, next) => ctx.redirect('https://github.com/HR/ciphora'))
+router.get('/', async (ctx, next) => ctx.body = 'https://github.com/HR/ciphora')
 // Gotta catch em all
 router.all('/*', async (ctx, next) => ctx.throw(404))
-
 
 /**
  * Start server
@@ -98,7 +89,6 @@ app
   .use(api.allowedMethods())
   .use(router.routes())
   .use(router.allowedMethods())
-
 
 // Start server
 server = server.listen(PORT, () => {
@@ -113,7 +103,7 @@ const graceful = new Graceful({
   // uses `redisClient.quit` for graceful exit
   // redisClient,
   // uses `mongoose.disconnect` for graceful exit
-  mongoose,
+  // mongoose,
   // default logger
   logger: console,
   // max time allowed in ms for graceful exit

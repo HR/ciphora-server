@@ -1,8 +1,9 @@
-const { createLogger, format, transports } = require('winston'),
+const winston = require('winston'),
   error = require('./error'),
   {
     IN_DEV
   } = require('../../config')
+const { createLogger, format, transports } = winston
 
 
 const logDir = IN_DEV ? './logs' : '/var/log/nodejs'
@@ -62,4 +63,5 @@ console.error = function (err) {
   error.handle(err)
 }
 
+winston.add(logger)
 module.exports = logger
