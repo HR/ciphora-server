@@ -1,0 +1,45 @@
+{
+  "name": "ciphora-server",
+  "version": "0.0.1",
+  "description": "Ciphora Server",
+  "main": "app.js",
+  "private": true,
+  "scripts": {
+    "dev": "./node_modules/.bin/gulp",
+    "preinstall": "if [ \"$NODE_ENV\" != \"development\" ] && [ -z \"$CI\" ]; then npm install pm2 -g  && pm2 install pm2-logrotate; fi",
+    "start": "pm2 start --attach process.yml && pm2 logs all",
+    "test": "echo TODO"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HR/ciphora-server.git"
+  },
+  "author": {
+    "name": "Habib Rehman",
+    "email": "h@rehman.email",
+    "url": "github.com/HR"
+  },
+  "bugs": {
+    "url": "https://github.com/HR/ciphora-server/issues"
+  },
+  "dependencies": {
+    "@koa/cors": "^3.0.0",
+    "@ladjs/graceful": "1.0.0",
+    "@sentry/node": "^5.13.2",
+    "ioredis": "^4.16.0",
+    "koa": "^2.11.0",
+    "koa-body": "^4.1.1",
+    "koa-helmet": "^5.2.0",
+    "koa-logger": "^3.2.1",
+    "@koa/router": "^8.0.8",
+    "lodash": "^4.17.15",
+    "mongoose": "^5.9.4",
+    "winston": "^3.2.1"
+  },
+  "devDependencies": {
+    "gulp": "^4.0.2",
+    "gulp-env": "^0.4.0",
+    "gulp-nodemon": "^2.5.0",
+    "nodemon": "^2.0.2"
+  }
+}
