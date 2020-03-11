@@ -1,6 +1,6 @@
 'use strict'
 /**
- * User model
+ * Peer model
  ******************************/
 
 const logger = require('winston'),

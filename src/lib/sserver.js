@@ -9,10 +9,10 @@ const logger = require('winston'),
   WebSocketServer = require('ws')
   .Server,
   Ajv = require('ajv'),
-  signalSchema = require('../schema/signal.json')
+  messageSchema = require('../schema/message.json')
 
 const ajv = new Ajv()
-const validateSignal = ajv.compile(signalSchema)
+const validateMessage = ajv.compile(messageSchema)
 
 class SServer extends EventEmitter {
   constructor(options = {}) {
@@ -53,9 +53,9 @@ class SServer extends EventEmitter {
 
     // TODO: Add authentication via signature for sender
     // Validate signal message format
-    if (!validateSignal(msg)) {
-      peer.emit('invalid-signal')
-      logger.warn('Invalid Signal from peer')
+    if (!validateMessage(msg)) {
+      peer.emit('invalid-message')
+      logger.warn('Invalid message from peer')
       return
     }
 

@@ -1,10 +1,15 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "http://example.com/product.schema.json",
-  "title": "Signal",
-  "description": "Signal sent from one peer to another peer",
+  "$id": "http://ciphora.com/schema/message.json",
+  "title": "Message",
+  "description": "Message sent from peer (relayed to another mostly)",
   "type": "object",
   "properties": {
+    "type": {
+      "description": "The type of the message",
+      "type": "string",
+      "enum": ["signal"]
+    },
     "senderId": {
       "description": "The unique identifier of the sending peer (i.e. PGP fingerprint)",
       "type": "string"
@@ -18,5 +23,5 @@
       "type": "object"
     }
   },
-  "required": [ "senderId", "receiverId", "data" ]
+  "required": ["type", "senderId", "receiverId", "data"]
 }
