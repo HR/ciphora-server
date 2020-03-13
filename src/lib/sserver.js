@@ -9,6 +9,7 @@ const logger = require('winston'),
   WebSocketServer = require('ws')
   .Server,
   Ajv = require('ajv'),
+  LRU = require("lru-cache"),
   messageSchema = require('../schema/message.json')
 
 const ajv = new Ajv()
@@ -51,6 +52,8 @@ class SServer extends EventEmitter {
       return
     }
 
+    console.log(JSON.stringify(msg))
+
     // TODO: Add authentication via signature for sender
     // Validate signal message format
     if (!validateMessage(msg)) {
@@ -66,17 +69,21 @@ class SServer extends EventEmitter {
       logger.info('New signal from peer ' + msg.senderId)
     }
 
-    // Check if recipient is connected
-    if (!this._isConnectedPeer(msg.receiverId)) {
-      peer.emit('unknown-receiver', msg.receiverId)
-      logger.debug(`Unknown receiver peer ${msg.receiverId} from ${msg.senderId}`)
-      return
+    switch (msg.type) {
+    case 'signal':
+      // Check if recipient is connected
+      if (!this._isConnectedPeer(msg.receiverId)) {
+        peer.emit('unknown-receiver', msg.receiverId)
+        logger.debug(`Unknown receiver peer ${msg.receiverId} from ${msg.senderId}`)
+        return
+      }
+      // It's a connected peer so send signal to it
+      this._peers[msg.receiverId].send(data)
+      peer.emit('signal-sent')
+      logger.info(`Sent signal to peer ${msg.receiverId} from ${msg.senderId}`)
+      break;
     }
 
-    // It's a connected peer so send signal to it
-    this._peers[msg.receiverId].send(data)
-    peer.emit('signal-sent')
-    logger.info(`Sent signal to peer ${msg.receiverId} from ${msg.senderId}`)
   }
 
   _onPeerClose(peer, code, message) {
