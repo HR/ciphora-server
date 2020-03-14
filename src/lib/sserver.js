@@ -31,6 +31,12 @@ class SServer extends EventEmitter {
 
   _onPeerConnection(peer) {
     logger.debug('New peer connection')
+    peer._emit = (event, data) => {
+      let response = { event }
+      if (data) response.data = data
+      peer.send(JSON.stringify(response))
+    }
+
     // Add event handlers to peer
     peer.on('message', (data) => this._onPeerMessage(peer, data))
     peer.on('error', (error) => this._onPeerError(peer, error))
@@ -38,7 +44,7 @@ class SServer extends EventEmitter {
   }
 
   _onPeerError(peer, error) {
-    this._reply(peer, error.toString(), true, error)
+    peer._emit('error', error)
   }
 
   _onPeerMessage(peer, data) {
@@ -47,7 +53,7 @@ class SServer extends EventEmitter {
     try {
       msg = JSON.parse(data)
     } catch (err) {
-      this._reply(peer, 'invalid-json', true)
+      peer._emit('invalid-json')
       logger.warn('Invalid JSON from peer')
       return
     }
@@ -57,7 +63,7 @@ class SServer extends EventEmitter {
     // TODO: Add authentication via signature for sender
     // Validate signal message format
     if (!validateMessage(msg)) {
-      this._reply(peer, 'invalid-message', true)
+      peer._emit('invalid-message')
       logger.warn('Invalid message from peer')
       return
     }
@@ -73,23 +79,17 @@ class SServer extends EventEmitter {
     case 'signal':
       // Check if recipient is connected
       if (!this._isConnectedPeer(msg.receiverId)) {
-        this._reply(peer, 'unknown-receiver', true)
+        peer._emit('unknown-receiver')
         logger.debug(`Unknown receiver peer ${msg.receiverId} from ${msg.senderId}`)
         return
       }
       // It's a connected peer so send signal to it
       this._peers[msg.receiverId].send(data)
-      this._reply(peer, 'signal-sent', false)
+      peer._emit('signal-sent')
       logger.info(`Sent signal to peer ${msg.receiverId} from ${msg.senderId}`)
       break
     }
 
-  }
-
-  _reply(peer, message, error, data) {
-    let response = { status: error ? 'error' : 'success', message }
-    if (data) response.data = data
-    peer.send(JSON.stringify(response))
   }
 
   _onPeerClose(peer, code, message) {
