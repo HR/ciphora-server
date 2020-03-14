@@ -38,7 +38,7 @@ class SServer extends EventEmitter {
   }
 
   _onPeerError(peer, error) {
-    peer.emit('error', error)
+    this._reply(peer, error.toString(), true, error)
   }
 
   _onPeerMessage(peer, data) {
@@ -47,7 +47,7 @@ class SServer extends EventEmitter {
     try {
       msg = JSON.parse(data)
     } catch (err) {
-      peer.emit('invalid-json')
+      this._reply(peer, 'invalid-json', true)
       logger.warn('Invalid JSON from peer')
       return
     }
@@ -57,7 +57,7 @@ class SServer extends EventEmitter {
     // TODO: Add authentication via signature for sender
     // Validate signal message format
     if (!validateMessage(msg)) {
-      peer.emit('invalid-message')
+      this._reply(peer, 'invalid-message', true)
       logger.warn('Invalid message from peer')
       return
     }
@@ -73,17 +73,23 @@ class SServer extends EventEmitter {
     case 'signal':
       // Check if recipient is connected
       if (!this._isConnectedPeer(msg.receiverId)) {
-        peer.emit('unknown-receiver', msg.receiverId)
+        this._reply(peer, 'unknown-receiver', true)
         logger.debug(`Unknown receiver peer ${msg.receiverId} from ${msg.senderId}`)
         return
       }
       // It's a connected peer so send signal to it
       this._peers[msg.receiverId].send(data)
-      peer.emit('signal-sent')
+      this._reply(peer, 'signal-sent', false)
       logger.info(`Sent signal to peer ${msg.receiverId} from ${msg.senderId}`)
-      break;
+      break
     }
 
+  }
+
+  _reply(peer, message, error, data) {
+    let response = { status: error ? 'error' : 'success', message }
+    if (data) response.data = data
+    peer.send(JSON.stringify(response))
   }
 
   _onPeerClose(peer, code, message) {
