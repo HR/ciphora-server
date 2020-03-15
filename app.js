@@ -14,7 +14,7 @@ const http = require('http'),
   Graceful = require('@ladjs/graceful'),{ hostname } = require('os'),
   logger = require('./src/lib/logger'), // Init logger to override console
   error = require('./src/lib/error'),
-  SignalServer = require('./src/lib/sserver'),
+  SignalServer = require('./src/lib/signalserver'),
   // redisClient = require('./src/lib/redis'),
   // mongoose = require('./src/lib/db'),
   peer = require('./src/api/peer'),

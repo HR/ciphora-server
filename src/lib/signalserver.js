@@ -15,7 +15,7 @@ const logger = require('winston'),
 const ajv = new Ajv()
 const validateMessage = ajv.compile(messageSchema)
 
-class SServer extends EventEmitter {
+class SignalServer extends EventEmitter {
   constructor(options = {}) {
     super()
     this._peers = {}
@@ -31,6 +31,7 @@ class SServer extends EventEmitter {
 
   _onPeerConnection(peer) {
     logger.debug('New peer connection')
+    // Attach an 'event emitter' to peer for responses from server
     peer._emit = (event, data) => {
       let response = { event }
       if (data) response.data = data
@@ -58,13 +59,13 @@ class SServer extends EventEmitter {
       return
     }
 
-    console.log(JSON.stringify(msg))
+    console.log(data)
 
-    // TODO: Add authentication via signature for sender
+    // TODO: Add authentication via pgp signature for sender
     // Validate signal message format
     if (!validateMessage(msg)) {
       peer._emit('invalid-message')
-      logger.warn('Invalid message from peer')
+      logger.warn('Invalid message from peer', msg.senderId)
       return
     }
 
@@ -72,24 +73,26 @@ class SServer extends EventEmitter {
     if (!this._isConnectedPeer(msg.senderId)) {
       this._addPeer(peer, msg.senderId)
     } else {
-      logger.info('New signal from peer ' + msg.senderId)
+      logger.info('New signal from peer', msg.senderId)
     }
 
-    switch (msg.type) {
-    case 'signal':
-      // Check if recipient is connected
-      if (!this._isConnectedPeer(msg.receiverId)) {
-        peer._emit('unknown-receiver')
-        logger.debug(`Unknown receiver peer ${msg.receiverId} from ${msg.senderId}`)
-        return
-      }
-      // It's a connected peer so send signal to it
-      this._peers[msg.receiverId].send(data)
-      peer._emit('signal-sent')
-      logger.info(`Sent signal to peer ${msg.receiverId} from ${msg.senderId}`)
-      break
+    // If it is just a connection message then we're done
+    if (msg.type === 'connect') {
+      return
     }
 
+    // Check if recipient is connected
+    if (!this._isConnectedPeer(msg.receiverId)) {
+      peer._emit('unknown-receiver')
+      logger.debug(`Unknown receiver peer ${msg.receiverId} from ${msg.senderId}`)
+      return
+    }
+
+    // If signal then emit signal received event on peer otherwise pass through
+    const peerEvent = (msg.type === 'signal') ? 'signal-received' : msg.type
+    // Signal to receiving peer
+    this._peers[msg.receiverId]._emit(peerEvent, msg)
+    logger.info(`Sent signal to peer ${msg.receiverId} from ${msg.senderId} (${msg.type})`)
   }
 
   _onPeerClose(peer, code, message) {
@@ -115,4 +118,4 @@ class SServer extends EventEmitter {
   }
 }
 
-exports = module.exports = SServer
+exports = module.exports = SignalServer

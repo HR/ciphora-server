@@ -8,10 +8,14 @@
     "type": {
       "description": "The type of the message",
       "type": "string",
-      "enum": ["connect", "signal"]
+      "enum": ["connect", "signal-request", "signal"]
     },
     "senderId": {
       "description": "The unique identifier of the sending peer (i.e. PGP fingerprint)",
+      "type": "string"
+    },
+    "senderPublicKey": {
+      "description": "The PGP public key of the sending peer",
       "type": "string"
     },
     "receiverId": {
@@ -30,6 +34,14 @@
         }
       },
       "required": ["type", "senderId"]
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "signal-request"
+        }
+      },
+      "required": ["type", "senderId", "senderPublicKey", "receiverId"]
     },
     {
       "properties": {
