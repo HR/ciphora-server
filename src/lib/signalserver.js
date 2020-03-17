@@ -83,15 +83,13 @@ class SignalServer extends EventEmitter {
 
     // Check if recipient is connected
     if (!this._isConnectedPeer(msg.receiverId)) {
-      peer._emit('unknown-receiver')
+      peer._emit('unknown-receiver', msg.receiverId)
       logger.debug(`Unknown receiver peer ${msg.receiverId} from ${msg.senderId}`)
       return
     }
 
-    // If signal then emit signal received event on peer otherwise pass through
-    const peerEvent = (msg.type === 'signal') ? 'signal-received' : msg.type
     // Signal to receiving peer
-    this._peers[msg.receiverId]._emit(peerEvent, msg)
+    this._peers[msg.receiverId]._emit(msg.type, msg)
     logger.info(`Sent signal to peer ${msg.receiverId} from ${msg.senderId} (${msg.type})`)
   }
 
