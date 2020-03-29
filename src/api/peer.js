@@ -4,24 +4,32 @@
  ******************************/
 
 const logger = require('winston'),
-  // redis = require('../lib/redis'),
-  response = require('../lib/response'),
-  request = require('../lib/request'),
-  error = require('../lib/error'),
-  // Peer = require('../schema/peer'),
-  {
-    TYPE_JSON
-  } = require('../../config')
-
+  response = require('../lib/response')
 
 /**
- * POST /peer/connect
+ * POST /auth
  */
-exports.connect = async (ctx, next) => {
-  // Validate request
-  ctx = await request.validate(ctx, { json: true })
+exports.auth = async (ctx, next) => {
+  const { publicKey: publicKeyArmored, timestamp, signature } = ctx.request.body
+  const {
+    keys: [publicKey]
+  } = await openpgp.key.readArmored(publicKeyArmored)
 
-  ctx.type = TYPE_JSON
-  ctx.status = 201
-  ctx.body = response.build(false, 'The peer was created')
+  // Validate signature
+  const verified = await openpgp.verify({
+    message: openpgp.cleartext.fromText(timestamp),
+    signature: await openpgp.signature.readArmored(signature),
+    publicKeys: [publicKey]
+  })
+  const [valid] = verified.signatures
+  if (!valid) {
+    // Authorization has been refused due to invalid signature
+    ctx.status = 401
+    ctx.body = response.error(401, 'Invalid signature')
+    return
+  }
+  // Signature verified so set user id for session
+  const userId = publicKey.getFingerprint()
+  ctx.app.emit('authed', userId, publicKey)
+  ctx.body = response.success('Authenticated')
 }

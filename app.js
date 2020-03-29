@@ -9,18 +9,16 @@ const http = require('http'),
   koaLogger = require('koa-logger'),
   koaRouter = require('@koa/router'),
   koaBody = require('koa-body'),
-  koaCors = require('@koa/cors'),
-  helmet = require('koa-helmet'),
-  Graceful = require('@ladjs/graceful'),{ hostname } = require('os'),
+  Graceful = require('@ladjs/graceful'),
+  { hostname } = require('os'),
   logger = require('./src/lib/logger'), // Init logger to override console
   error = require('./src/lib/error'),
+  { validate } = require('./src/lib/request'),
   SignalServer = require('./src/lib/signalserver'),
-  // redisClient = require('./src/lib/redis'),
-  // mongoose = require('./src/lib/db'),
+  // redisClient = require('./src/lib/db'),
   peer = require('./src/api/peer'),
   release = require('./package.json'),
-  WebSocket = require('ws'),
-  {API_VERSION, ENV, IN_DEV, PORT} = require('./config')
+  { API_VERSION, ENV, IN_DEV, PORT } = require('./config')
 
 /**
  * Init
@@ -34,26 +32,13 @@ const api = new koaRouter({
   prefix: `/${API_VERSION}`
 })
 let server = http.createServer(app.callback())
-const ss = new SignalServer({ server })
-
-ss.on('error', (err) => app.emit('error', err))
+const ss = new SignalServer(server)
+ss.on('error', err => app.emit('error', err))
+app.on('authenticated', ss.addPeer)
 
 /**
  * Config
  **/
-
-// Add some security via HTTP headers
-// app.use(helmet())
-
-if (IN_DEV) {
-  // Dev
-  // Enable CORS from any origin in dev mode
-  app.use(koaCors({ origin: '*' }))
-} else {
-  // Production
-  // Restrictive CORS
-  app.use(koaCors())
-}
 
 // Parse request body (JSON, multipart,...)
 app.use(koaBody({ multipart: true }))
@@ -71,13 +56,27 @@ app.on('error', error.handleApp)
  * Routes
  **/
 
-// Users
-// api.get('/:id/referral', users.referral)
+// Authenticate new peer
+api.post(
+  '/auth',
+  validate({
+    json: true,
+    paramsAll: ['publicKey', 'timestamp', 'signature']
+  }),
+  peer.auth
+)
 
 // Home
-router.get('/', async (ctx, next) => ctx.body = 'https://github.com/HR/ciphora')
+router.get(
+  '/',
+  async (ctx, next) => (ctx.body = 'https://github.com/HR/ciphora')
+)
 // Gotta catch em all
-router.all('/*', async (ctx, next) => ctx.throw(404))
+router.all('/*', async (ctx, next) => {
+  // ignore favicon
+  if (ctx.path === '/favicon.ico') return
+  ctx.throw(404)
+})
 
 /**
  * Start server
@@ -92,7 +91,9 @@ app
 
 // Start server
 server = server.listen(PORT, () => {
-  console.info(`Started for Ciphora Server ${API_VERSION} (${release.version}) - ${ENV}`)
+  console.info(
+    `Started for Ciphora Server ${API_VERSION} (${release.version}) - ${ENV}`
+  )
   console.info(`Running at http://${hostname()}:${PORT}`)
 })
 
@@ -102,8 +103,6 @@ const graceful = new Graceful({
   server,
   // uses `redisClient.quit` for graceful exit
   // redisClient,
-  // uses `mongoose.disconnect` for graceful exit
-  // mongoose,
   // default logger
   logger: console,
   // max time allowed in ms for graceful exit

@@ -1,37 +1,27 @@
 'use strict'
 /**
- * DB (connector)
+ * Redis (connector)
  ******************************/
 
 const logger = require('winston'),
-	mongoose = require('mongoose'),
-	{ MONGODB_URI, IN_DEV } = require('../../config')
+  Redis = require('ioredis'),
+  { REDIS_URI } = require('../../config')
 
-if (IN_DEV) {
-  mongoose.set('debug', true)
-}
-
-if (mongoose.connection.readyState != 1) {
-	mongoose.connect(MONGODB_URI, {
-		autoIndex: false,
-		useNewUrlParser: true,
-    useUnifiedTopology: true
-	})
-}
+const redis = new Redis(REDIS_URI)
 
 // When successfully connected
-mongoose.connection.on('connected', function () {
-	console.info(`Mongoose default connection opened ✅`)
+redis.on('ready', function (err) {
+  console.info('Redis default connection opened ✅')
 })
 
 // If the connection throws an error
-mongoose.connection.on('error', function (err) {
-	console.error(err)
+redis.on('error', function (err) {
+  console.error(err)
 })
 
 // When the connection is disconnected
-mongoose.connection.on('disconnected', function () {
-	console.info('Mongoose default connection disconnected')
+redis.on('close', function () {
+  console.info('Redis default connection disconnected')
 })
 
-module.exports = mongoose
+module.exports = redis

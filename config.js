@@ -17,8 +17,7 @@ module.exports = {
   ERRORS: {
     400: 'Incorrect or missing params',
     404: '404 Wubba Lubba Dub Dub!',
-    409: 'Already exists',
     406: 'Request must be of JSON format',
-    500: 'An unexpected error occured ¯\_(ツ)_/¯'
+    500: 'An unexpected error occured ¯_(ツ)_/¯'
   }
 }

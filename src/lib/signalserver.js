@@ -4,32 +4,57 @@
  ******************************/
 
 const logger = require('winston'),
-  EventEmitter = require('events')
-  .EventEmitter,
-  WebSocketServer = require('ws')
-  .Server,
+  EventEmitter = require('events').EventEmitter,
+  { parse } = require('url'),
+  WebSocketServer = require('ws').Server,
   Ajv = require('ajv'),
-  LRU = require("lru-cache"),
   messageSchema = require('../schema/message.json')
 
 const ajv = new Ajv()
 const validateMessage = ajv.compile(messageSchema)
 
 class SignalServer extends EventEmitter {
-  constructor(options = {}) {
+  constructor (server) {
     super()
+
     this._peers = {}
-    this._server = new WebSocketServer(options)
+    this._connections = {}
+    this._server = new WebSocketServer(server)
     // Add event handlers
-    this._server.on('connection', (peer, req, client) => this._onPeerConnection(peer))
-    this._server.on('error', (error) => this._onServerError(error))
+    this._server.on('connection', this._onPeerConnection)
+    this._server.on('error', this._onServerError)
+    // Authenticate when peer tries to establish websocket connection
+    server.on('upgrade', this._authenticatePeer)
+
+    this._authenticatePeer = this._authenticatePeer.bind(this)
   }
 
-  _onServerError(error) {
+  addPeer (peerId, publicKey) {
+    console.log(arguments)
+    this._peers[peerId] = { publicKey }
+    console.log('Added authenticated peer', peerId, publicKey)
+  }
+
+  _authenticatePeer (request, socket, head) {
+    const query = url.parse(request.url, true).query
+    console.log('Parsed query', query)
+    if (!this._peers[query.id]) {
+      console.log('Unauthenticated peer', query.id)
+      // Unauthenticated so reject connection
+      socket.destroy()
+      return
+    }
+
+    this._server.handleUpgrade(request, socket, head, function (ws) {
+      this._server.emit('connection', ws, request)
+    })
+  }
+
+  _onServerError (error) {
     this.emit('error', error)
   }
 
-  _onPeerConnection(peer) {
+  _onPeerConnection (peer, req, client) {
     logger.debug('New peer connection')
     // Attach an 'event emitter' to peer for responses from server
     peer._emit = (event, data) => {
@@ -37,18 +62,20 @@ class SignalServer extends EventEmitter {
       if (data) response.data = data
       peer.send(JSON.stringify(response))
     }
+    // Add peer connection
+    this._addConnection(peer)
 
     // Add event handlers to peer
-    peer.on('message', (data) => this._onPeerMessage(peer, data))
-    peer.on('error', (error) => this._onPeerError(peer, error))
+    peer.on('message', data => this._onPeerMessage(peer, data))
+    peer.on('error', error => this._onPeerError(peer, error))
     peer.on('close', (code, message) => this._onPeerClose(peer, code, message))
   }
 
-  _onPeerError(peer, error) {
+  _onPeerError (peer, error) {
     peer._emit('error', error)
   }
 
-  _onPeerMessage(peer, data) {
+  _onPeerMessage (peer, data) {
     let msg = null
     // Try to parse message as JSON
     try {
@@ -61,19 +88,11 @@ class SignalServer extends EventEmitter {
 
     console.log(data)
 
-    // TODO: Add authentication via pgp signature for sender
     // Validate signal message format
     if (!validateMessage(msg)) {
       peer._emit('invalid-message')
       logger.warn('Invalid message from peer', msg.senderId)
       return
-    }
-
-    // Add peer as connected peer if not already added
-    if (!this._isConnectedPeer(msg.senderId)) {
-      this._addPeer(peer, msg.senderId)
-    } else {
-      logger.info('New signal from peer', msg.senderId)
     }
 
     // If it is just a connection message then we're done
@@ -82,37 +101,38 @@ class SignalServer extends EventEmitter {
     }
 
     // Check if recipient is connected
-    if (!this._isConnectedPeer(msg.receiverId)) {
+    if (!this._isConnected(msg.receiverId)) {
       peer._emit('unknown-receiver', msg.receiverId)
-      logger.debug(`Unknown receiver peer ${msg.receiverId} from ${msg.senderId}`)
+      logger.debug(
+        `Unknown receiver peer ${msg.receiverId} from ${msg.senderId}`
+      )
       return
     }
 
     // Signal to receiving peer
-    this._peers[msg.receiverId]._emit(msg.type, msg)
-    logger.info(`Sent signal to peer ${msg.receiverId} from ${msg.senderId} (${msg.type})`)
+    this._connections[msg.receiverId]._emit(msg.type, msg)
+    logger.info(
+      `Sent signal to peer ${msg.receiverId} from ${msg.senderId} (${msg.type})`
+    )
   }
 
-  _onPeerClose(peer, code, message) {
-    if (!!peer.id && this._isConnectedPeer(peer.id)) {
+  _onPeerClose (peer, code, message) {
+    if (!!peer.id && this._isConnected(peer.id)) {
       // Remove the peer from the local peers list
+      delete this._connections[peer.id]
       delete this._peers[peer.id]
-
-      this.emit('remove-peer', peer.id)
       logger.info(`Removed peer ${peer.id} ${code} ${message}`)
     }
   }
 
-  _addPeer(peer, peerId) {
+  _addConnection (peer, peerId) {
     peer.id = peerId
-    this._peers[peerId] = peer
-
-    this.emit('add-peer', peer.id)
-    logger.info(`Added peer ${peerId}`)
+    this._connections[peerId] = peer
+    logger.info(`Added peer connection ${peerId}`)
   }
 
-  _isConnectedPeer(peerId) {
-    return !!this._peers[peerId]
+  _isConnected (peerId) {
+    return !!this._connections[peerId]
   }
 }
 
