@@ -13,12 +13,10 @@ const http = require('http'),
   { hostname } = require('os'),
   logger = require('./src/lib/logger'), // Init logger to override console
   error = require('./src/lib/error'),
-  { validate } = require('./src/lib/request'),
   SignalServer = require('./src/lib/signalserver'),
   // redisClient = require('./src/lib/db'),
-  peer = require('./src/api/peer'),
   release = require('./package.json'),
-  { API_VERSION, ENV, IN_DEV, PORT } = require('./config')
+  { API_VERSION, ENV, PORT } = require('./config')
 
 /**
  * Init
@@ -34,14 +32,13 @@ const api = new koaRouter({
 let server = http.createServer(app.callback())
 const ss = new SignalServer(server)
 ss.on('error', err => app.emit('error', err))
-app.on('authenticated', ss.addPeer)
 
 /**
  * Config
  **/
 
-// Parse request body (JSON, multipart,...)
-app.use(koaBody({ multipart: true }))
+// Parse request body (JSON)
+app.use(koaBody())
 
 // Koa request logging
 app.use(koaLogger(console.info))
@@ -55,16 +52,6 @@ app.on('error', error.handleApp)
 /**
  * Routes
  **/
-
-// Authenticate new peer
-api.post(
-  '/auth',
-  validate({
-    json: true,
-    paramsAll: ['publicKey', 'timestamp', 'signature']
-  }),
-  peer.auth
-)
 
 // Home
 router.get(

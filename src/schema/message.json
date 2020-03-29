@@ -32,13 +32,7 @@
     }
   },
   "required": ["type", "senderId"],
-  "oneOf": [{
-      "properties": {
-        "type": {
-          "const": "connect"
-        }
-      }
-    },
+  "oneOf": [
     {
       "properties": {
         "type": {
