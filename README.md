@@ -9,25 +9,8 @@
 <br>
 <br>
 
-# Docs
-All responses and requests should be of content type `application/json`.
-A standard response has the following **response schema**:
-```js
-{
-    status: {
-        error: Boolean,
-        message: String
-    },
-    data: Object || Array
-}
-```
-
-### Common errors
-- `401` - Unauthorized. (`User ID` not supplied in the format required or invalid)
-- `401` - Access token has expired.
-- `400` - Incorrect or missing params.
-- `409` - Already exists.
-- `500` - Unexpected error occured (most likely a MongoDB error e.g. duplicate key).
+Simple discovery and signalling (websocket) server for the Ciphora (https://github.com/HR/ciphora), a P2P E2E encrypted messaging app.
+Provides simple peer authentication through PGP. See `src/schema/message.json` for messaging format.
 
 
 # Development
@@ -48,8 +31,7 @@ Create `.env.json` file with the required environmental variables
 ```json
 {
   "NODE_ENV": "development",
-  "REDIS_URI": "...",
-  "MONGODB_URI": "..."
+  "REDIS_URI": "..."
 }
 ```
 
