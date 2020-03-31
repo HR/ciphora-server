@@ -90,7 +90,7 @@ class SignalServer extends EventEmitter {
     // Validate message format
     if (!validateMessage(msg)) {
       peer._emit('invalid-message')
-      logger.warn('Invalid message from peer', msg.senderId)
+      logger.warn('Invalid message from peer', peer.id)
       return null
     }
 
@@ -98,13 +98,13 @@ class SignalServer extends EventEmitter {
     const { senderId, senderPublicKey } = msg
     if (senderId !== peer.id) {
       peer._emit('unauthorized')
-      logger.warn('Unauthorized senderId from peer', msg.senderId)
+      logger.warn('Unauthorized senderId from peer', peer.id)
       return null
     }
 
     if (senderPublicKey && senderPublicKey !== peer.publicKey) {
       peer._emit('unauthorized')
-      logger.warn('Unauthorized senderPublicKey from peer', msg.senderId)
+      logger.warn('Unauthorized senderPublicKey from peer', peer.id)
       return null
     }
 
@@ -117,20 +117,18 @@ class SignalServer extends EventEmitter {
     // Invalid message
     if (!msg) return
 
+    const { senderId, receiverId, type } = msg
+
     // Check if recipient is connected
-    if (!this._isConnected(msg.receiverId)) {
-      peer._emit('unknown-receiver', msg.receiverId)
-      logger.debug(
-        `Unknown receiver peer ${msg.receiverId} from ${msg.senderId}`
-      )
+    if (!this._isConnected(receiverId)) {
+      peer._emit('unknown-receiver', { type, receiverId })
+      logger.debug(`Unknown receiver peer ${receiverId} from ${senderId}`)
       return
     }
 
     // Signal to receiving peer
-    this._peers[msg.receiverId]._emit(msg.type, msg)
-    logger.info(
-      `Sent signal to peer ${msg.receiverId} from ${msg.senderId} (${msg.type})`
-    )
+    this._peers[receiverId]._emit(type, msg)
+    logger.info(`Sent signal to peer ${receiverId} from ${senderId} (${type})`)
   }
 
   // Handles connection closure with a peer

@@ -19,7 +19,7 @@ Provides simple peer authentication through PGP. See `src/schema/message.json` f
 ## Setup
 Clone the repo
 ```
-$ git clone https://github.com/HR/ciphora-server/
+$ git clone https://github.com/HR/ciphora-server.git
 ```
 
 Install all libraries and tools
