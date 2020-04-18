@@ -2,7 +2,7 @@
   "name": "ciphora-server",
   "version": "0.0.1",
   "description": "Ciphora Server",
-  "main": "app.js",
+  "main": "server.js",
   "private": true,
   "scripts": {
     "dev": "./node_modules/.bin/gulp",
@@ -23,17 +23,8 @@
     "url": "https://github.com/HR/ciphora-server/issues"
   },
   "dependencies": {
-    "@koa/router": "^8.0.8",
-    "@ladjs/graceful": "1.0.0",
-    "@sentry/node": "^5.13.2",
     "ajv": "^6.12.0",
-    "ioredis": "^4.16.0",
-    "koa": "^2.11.0",
-    "koa-body": "^4.1.1",
-    "koa-logger": "^3.2.1",
-    "lodash": "^4.17.15",
     "openpgp": "^4.10.1",
-    "winston": "^3.2.1",
     "ws": "^7.2.3"
   },
   "devDependencies": {

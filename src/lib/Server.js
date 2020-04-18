@@ -1,11 +1,12 @@
 'use strict'
 /**
- * WebSocket Signal Server
+ * WebSocket Server
+ * Provides discovery and signalling
+ * See ../schema/message.json for the protocol
  ******************************/
 
-const logger = require('winston'),
-  url = require('url'),
-  EventEmitter = require('events').EventEmitter,
+const url = require('url'),
+  { EventEmitter } = require('events'),
   { pgpVerify } = require('./utils'),
   WebSocketServer = require('ws').Server,
   Ajv = require('ajv'),
@@ -14,8 +15,8 @@ const logger = require('winston'),
 const ajv = new Ajv()
 const validateMessage = ajv.compile(messageSchema)
 
-class SignalServer extends EventEmitter {
-  constructor (server) {
+class Server extends EventEmitter {
+  constructor (httpServer) {
     super()
 
     this._peers = {}
@@ -30,10 +31,10 @@ class SignalServer extends EventEmitter {
     this._server.on('connection', this._onPeerConnection)
     this._server.on('error', this._onServerError)
     // Authenticate when peer tries to establish a websocket connection
-    server.on('upgrade', this._authenticatePeer)
+    httpServer.on('upgrade', this._authenticatePeer)
   }
 
-  // Handles peer connection request authentication
+  // Authenticates a peer attempting to connect
   async _authenticatePeer (request, socket, head) {
     // Parse authentication request
     const query = url.parse(request.url, true).query
@@ -41,7 +42,7 @@ class SignalServer extends EventEmitter {
     // Verify signature
     const { valid, userId } = await pgpVerify(publicKey, timestamp, signature)
     if (!valid) {
-      logger.log('Authentication failed for ' + userId)
+      console.log('Authentication failed for ' + userId)
       // Invalid so reject connection
       socket.destroy()
       return
@@ -59,7 +60,7 @@ class SignalServer extends EventEmitter {
 
   // Handles new peer connections
   _onPeerConnection (peer, peerId, publicKey) {
-    logger.debug('New peer connection ' + peerId)
+    console.debug('New peer connection ' + peerId)
 
     peer = this._addPeer(peer, peerId, publicKey)
 
@@ -83,14 +84,14 @@ class SignalServer extends EventEmitter {
       msg = JSON.parse(data)
     } catch (err) {
       peer._emit('invalid-json')
-      logger.warn('Invalid JSON from peer')
+      console.warn('Invalid JSON from peer')
       return null
     }
 
     // Validate message format
     if (!validateMessage(msg)) {
       peer._emit('invalid-message')
-      logger.warn('Invalid message from peer', peer.id)
+      console.warn('Invalid message from peer', peer.id)
       return null
     }
 
@@ -98,13 +99,13 @@ class SignalServer extends EventEmitter {
     const { senderId, senderPublicKey } = msg
     if (senderId !== peer.id) {
       peer._emit('unauthorized')
-      logger.warn('Unauthorized senderId from peer', peer.id)
+      console.warn('Unauthorized senderId from peer', peer.id)
       return null
     }
 
     if (senderPublicKey && senderPublicKey !== peer.publicKey) {
       peer._emit('unauthorized')
-      logger.warn('Unauthorized senderPublicKey from peer', peer.id)
+      console.warn('Unauthorized senderPublicKey from peer', peer.id)
       return null
     }
 
@@ -122,13 +123,13 @@ class SignalServer extends EventEmitter {
     // Check if recipient is connected
     if (!this._isConnected(receiverId)) {
       peer._emit('unknown-receiver', { type, receiverId })
-      logger.debug(`Unknown receiver peer ${receiverId} from ${senderId}`)
+      console.debug(`Unknown receiver peer ${receiverId} from ${senderId}`)
       return
     }
 
     // Signal to receiving peer
     this._peers[receiverId]._emit(type, msg)
-    logger.info(`Sent signal to peer ${receiverId} from ${senderId} (${type})`)
+    console.info(`Sent signal to peer ${receiverId} from ${senderId} (${type})`)
   }
 
   // Handles connection closure with a peer
@@ -136,7 +137,7 @@ class SignalServer extends EventEmitter {
     if (!!peer.id && this._isConnected(peer.id)) {
       // Remove the peer from the local peers list
       delete this._peers[peer.id]
-      logger.info(`Removed peer ${peer.id} ${code} ${message}`)
+      console.info(`Removed peer ${peer.id} ${code} ${message}`)
     }
   }
 
@@ -152,7 +153,7 @@ class SignalServer extends EventEmitter {
     }
 
     this._peers[peerId] = peer
-    logger.info(`Added peer connection ${peerId}`)
+    console.info(`Added peer connection ${peerId}`)
     return peer
   }
 
@@ -162,4 +163,4 @@ class SignalServer extends EventEmitter {
   }
 }
 
-exports = module.exports = SignalServer
+exports = module.exports = Server

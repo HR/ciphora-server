@@ -12,15 +12,16 @@ gulp.task('nodemon', function (done) {
   })
 
   nodemon({
-    script: 'app.js',
+    script: 'server.js',
     verbose: true,
     debug: true,
     ignore: ['logs/', '*.log', '.DS_Store'],
     nodeArgs: ['--inspect'],
     ext: 'js json',
     events: {
-      start: "mkdir -p logs",
-      restart: "osascript -e 'display notification \"App restarted due to:\n'$FILENAME'\" with title \"nodemon\"'"
+      start: 'mkdir -p logs',
+      restart:
+        'osascript -e \'display notification "App restarted due to:\n\'$FILENAME\'" with title "nodemon"\''
     },
     done: done
   })
@@ -32,7 +33,11 @@ gulp.task('inspect', function () {
     vars: {}
   })
 
-  exec('./node_modules/.bin/nodemon --inspect-brk app.js', function (err, stdout, stderr) {
+  exec('./node_modules/.bin/nodemon --inspect-brk server.js', function (
+    err,
+    stdout,
+    stderr
+  ) {
     console.log(stdout)
     console.log(stderr)
   })
