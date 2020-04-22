@@ -19,7 +19,6 @@ gulp.task('nodemon', function (done) {
     nodeArgs: ['--inspect'],
     ext: 'js json',
     events: {
-      start: 'mkdir -p logs',
       restart:
         'osascript -e \'display notification "App restarted due to:\n\'$FILENAME\'" with title "nodemon"\''
     },
