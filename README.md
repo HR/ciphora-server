@@ -9,7 +9,7 @@
 <br>
 <br>
 
-Simple discovery and signalling (websocket) server for the Ciphora (https://github.com/HR/ciphora), a P2P E2E encrypted messaging app.
+Simple discovery and signalling (websocket) server for the [Ciphora](https://github.com/HR/ciphora), a P2P E2E encrypted messaging app.
 Provides simple peer authentication through PGP. See `src/schema/message.json` for messaging format.
 
 
