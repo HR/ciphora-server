@@ -9,10 +9,11 @@ const url = require('url'),
   { EventEmitter } = require('events'),
   { pgpVerify } = require('./utils'),
   WebSocketServer = require('ws').Server,
-  Ajv = require('ajv'),
+  Ajv = require("ajv").default,
+  AjvFormats = require("ajv-formats"),
   messageSchema = require('../schema/message.json')
 
-const ajv = new Ajv()
+const ajv = AjvFormats(new Ajv())
 const validateMessage = ajv.compile(messageSchema)
 
 class Server extends EventEmitter {

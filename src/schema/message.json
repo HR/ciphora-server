@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "http://ciphora.com/schema/message.json",
+  "$id": "https://github.com/HR/ciphora/schema/message.json",
   "title": "Message",
   "description": "Message sent from peer (relayed to another mostly)",
   "type": "object",
